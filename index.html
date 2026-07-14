@@ -202,15 +202,21 @@ function setSticky(v) {
   try { localStorage.setItem(STICKY_KEY, JSON.stringify({ p: v.phone, t: Date.now() })); } catch (e) {}
 }
 
-const vendor = getSticky() || (() => {
+/* ---------- MODO TESTE ---------- */
+/* Abrindo com ?teste=1 o sticky e o redirect automático são desligados:
+   cada F5 sorteia de novo. Serve pra conferir a rotação. */
+const params    = new URLSearchParams(window.location.search);
+const MODO_TESTE = params.get("teste") === "1";
+
+const vendor = (!MODO_TESTE && getSticky()) || (() => {
   const v = VENDORS[sorteiaIndice(VENDORS.length)];
-  setSticky(v);
+  if (!MODO_TESTE) setSticky(v);
   return v;
 })();
 
 /* ---------- MONTA O LINK ---------- */
-const params = new URLSearchParams(window.location.search);
-const extra  = params.toString() ? ` [${params.toString()}]` : "";   // repassa utm na mensagem
+params.delete("teste");
+const extra = params.toString() ? ` [${params.toString()}]` : "";   // repassa utm na mensagem
 const waUrl  = `https://wa.me/${vendor.phone}?text=${encodeURIComponent(buildMessage(vendor.name) + extra)}`;
 
 const btn = document.getElementById("whatsappBtn");
@@ -233,6 +239,7 @@ btn.addEventListener("click", () => { redirected = true; });   // evita disparo 
   label.textContent = Math.max(seconds, 0);
   ring.style.strokeDashoffset = C * (1 - (COUNTDOWN - seconds) / COUNTDOWN);
   if (seconds <= 0) {
+    if (MODO_TESTE) { label.textContent = "OK"; return; }   // teste: não redireciona
     if (!redirected) { redirected = true; window.location.href = waUrl; }
     return;
   }
