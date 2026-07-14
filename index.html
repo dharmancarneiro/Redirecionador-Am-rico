@@ -210,9 +210,8 @@ btn.addEventListener("click", () => { redirected = true; });
 (async () => {
   const { vendor, info } = await proximoDaFila();
 
-  params.delete("teste");
-  const extra = params.toString() ? ` [${params.toString()}]` : "";   // repassa utm na mensagem
-  waUrl = `https://wa.me/${vendor.phone}?text=${encodeURIComponent(buildMessage(vendor.name) + extra)}`;
+  /* Mensagem SEMPRE limpa. Nada da URL entra no texto do WhatsApp. */
+  waUrl = `https://wa.me/${vendor.phone}?text=${encodeURIComponent(buildMessage(vendor.name))}`;
 
   nameEl.textContent = vendor.name;
   btn.href = waUrl;
