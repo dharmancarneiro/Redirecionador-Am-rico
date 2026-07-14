@@ -139,6 +139,7 @@
    gratuita, sem cadastro). Cada acesso pega o PRÓXIMO número da fila:
    Karita -> Derek -> Nicolly -> Mateus -> Elidiane -> Liz -> Karita...
    Ninguém repete antes de fechar a rodada de 6.
+   TODO acesso avança a fila — inclusive refresh. Sem excecao.
    ===================================================================== */
 
 /* ---------- TIME (a ORDEM aqui É a ordem da fila) ---------- */
@@ -155,9 +156,7 @@ const VENDORS = [
 const CONTADOR_URL = "https://abacus.jasoncameron.dev/hit/dharmancarneiro.github.io/arcanjos-0808";
 /* Trocar "arcanjos-0808" se quiser ZERAR a fila -> use outro nome, ex: arcanjos-0808-v2 */
 
-const COUNTDOWN  = 3;
-const STICKY_KEY = "arcanjos_lead_v2";
-const STICKY_MS  = 30 * 60 * 1000;   // mesmo lead volta pro mesmo vendedor por 30 min
+const COUNTDOWN = 3;
 
 const buildMessage = (n) =>
   `Olá ${n}, tudo bem? Quero garantir minha vaga na Conexão com os 7 Arcanjos, o evento presencial do Professor Américo em São Paulo (08/08).`;
@@ -169,26 +168,10 @@ const MODO_TESTE = params.get("teste") === "1";
 /* ---------- ROBÔS não queimam posição da fila ---------- */
 const IS_BOT = /bot|crawl|spider|preview|facebookexternalhit|whatsapp|slurp|bingpreview|linkedinbot|telegrambot|headless|lighthouse/i.test(navigator.userAgent);
 
-/* ---------- STICKY ---------- */
-function getSticky() {
-  if (MODO_TESTE) return null;
-  try {
-    const o = JSON.parse(localStorage.getItem(STICKY_KEY) || "null");
-    if (!o || Date.now() - o.t > STICKY_MS) return null;
-    return VENDORS.find(v => v.phone === o.p) || null;
-  } catch (e) { return null; }
-}
-function setSticky(v) {
-  if (MODO_TESTE) return;
-  try { localStorage.setItem(STICKY_KEY, JSON.stringify({ p: v.phone, t: Date.now() })); } catch (e) {}
-}
-
 /* ---------- PEGA O PRÓXIMO DA FILA ---------- */
+/* SEM sticky: todo acesso avança a fila. Clicou -> proximo. Sempre. */
 async function proximoDaFila() {
-  const s = getSticky();
-  if (s) return { vendor: s, info: "sticky" };
-
-  if (IS_BOT) return { vendor: VENDORS[0], info: "bot" };
+  if (IS_BOT) return { vendor: VENDORS[0], info: "bot (nao consome fila)" };
 
   const ctrl = new AbortController();
   const to   = setTimeout(() => ctrl.abort(), 3000);
@@ -202,15 +185,12 @@ async function proximoDaFila() {
     if (!Number.isFinite(n) || n < 1) throw new Error("valor inválido");
 
     const i = (n - 1) % VENDORS.length;   // 1->0, 2->1, ... 7->0
-    const v = VENDORS[i];
-    setSticky(v);
-    return { vendor: v, info: `fila #${n} → pos ${i + 1}/${VENDORS.length}` };
+    return { vendor: VENDORS[i], info: `fila #${n} → pos ${i + 1}/${VENDORS.length}` };
 
   } catch (e) {
     clearTimeout(to);
-    const v = VENDORS[Math.floor(Math.random() * VENDORS.length)];  // nunca deixa o lead sem atendimento
-    setSticky(v);
-    return { vendor: v, info: "fallback (contador off): " + e.message };
+    return { vendor: VENDORS[Math.floor(Math.random() * VENDORS.length)],   // nunca deixa o lead sem atendimento
+             info: "fallback (contador off): " + e.message };
   }
 }
 
